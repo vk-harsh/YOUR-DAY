@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paper Self Assistant</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Self Assistant</p>
+        <h1>Paper Planner</h1>
+      </div>
+      <div class="month-controls">
+        <button class="icon-button" id="prevMonth" aria-label="Previous month" title="Previous month">&lt;</button>
+        <label class="month-picker">
+          <span>Month</span>
+          <input type="month" id="monthInput">
+        </label>
+        <button class="icon-button" id="nextMonth" aria-label="Next month" title="Next month">&gt;</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="paper planner-panel" aria-labelledby="plannerTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Monthly Habit Tracker</p>
+            <h2 id="plannerTitle">Let's do it!</h2>
+          </div>
+          <div class="button-group">
+            <button class="text-button" id="taskEditToggle">Edit tasks</button>
+            <button class="text-button" id="addPrimary">+ Add habit</button>
+          </div>
+        </div>
+
+        <div class="tracker-wrap">
+          <table class="habit-table" id="primaryTable" aria-label="Primary monthly habit tracker"></table>
+        </div>
+
+        <div class="score-board" aria-labelledby="scoreTitle">
+          <div>
+            <p class="eyebrow">Daily habits</p>
+            <h2 id="scoreTitle">Score Graph</h2>
+          </div>
+          <div class="score-chart" id="scoreChart"></div>
+        </div>
+
+        <div class="daily-area">
+          <div class="daily-header">
+            <div>
+              <p class="eyebrow">Selected Day</p>
+              <h2 id="selectedDayLabel">Today</h2>
+            </div>
+            <input type="date" id="selectedDate">
+          </div>
+
+          <div class="task-columns">
+            <div class="task-list primary-list">
+              <div class="list-title">
+                <h3>Primary</h3>
+                <span>Common routine</span>
+              </div>
+              <div id="primaryDayTasks" class="task-stack"></div>
+            </div>
+
+            <div class="task-list">
+              <div class="list-title">
+                <h3>Secondary</h3>
+                <button class="mini-button" id="addSecondary">Add</button>
+              </div>
+              <div id="secondaryTasks" class="task-stack"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side-rail">
+        <section class="paper learning-panel" aria-labelledby="learningTitle">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Learning Desk</p>
+              <h2 id="learningTitle">Topic Pages</h2>
+            </div>
+          </div>
+          <form class="topic-form" id="topicForm">
+            <input type="text" id="topicInput" placeholder="Enter a topic, e.g. Git basics">
+            <button type="submit">Make pages</button>
+          </form>
+
+          <article class="study-page" id="studyPage" aria-live="polite">
+            <div class="page-topline">
+              <span class="page-number" id="pageNumber">Page 1 of 10</span>
+            </div>
+            <div class="page-visual" id="pageVisual" aria-hidden="true"></div>
+            <h3 id="pageTitle">Enter a topic to prepare study pages.</h3>
+            <div class="page-body" id="pageBody">Your notebook-style pages will appear here with simple diagrams, key points, examples, and revision notes.</div>
+          </article>
+
+          <div class="page-actions">
+            <button class="mini-button" id="prevPage" type="button">Previous</button>
+            <button class="mini-button" id="nextPage" type="button">Next</button>
+          </div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <button class="assistant-core" id="assistantOpen" type="button" aria-label="Open assistant" aria-controls="assistantOverlay" aria-expanded="false">
+    <span class="core-ring"></span>
+    <span class="core-dot"></span>
+  </button>
+
+  <div class="assistant-overlay" id="assistantOverlay" hidden>
+    <section class="paper assistant-panel assistant-deck" aria-labelledby="assistantTitle">
+      <div class="section-heading compact assistant-deck-heading">
+        <div>
+          <p class="eyebrow">AI Chatbot</p>
+          <h2 id="assistantTitle">Assistant</h2>
+        </div>
+        <button class="mini-button" id="assistantClose" type="button">Close</button>
+      </div>
+      <div class="chat-log" id="chatLog" aria-live="polite"></div>
+      <form class="chat-form" id="chatForm">
+        <input type="text" id="chatInput" placeholder="Ask for planning help..." autocomplete="off">
+        <button type="submit">Send</button>
+      </form>
+    </section>
+  </div>
+
+  <template id="taskTemplate">
+    <div class="task-row">
+      <input type="checkbox">
+      <span contenteditable="false"></span>
+      <button type="button" aria-label="Delete task" title="Delete task">x</button>
+    </div>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
