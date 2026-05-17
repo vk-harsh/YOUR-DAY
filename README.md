@@ -2,7 +2,7 @@
 
 A beautiful, interactive to-do list and habit tracker inspired by physical paper planners. 
 
-![Paper Planner Interface](screenshot.png)
+![Paper Planner Interface](screenshot.jpeg)
 
 ## Features 🌟
 
