@@ -1,0 +1,10 @@
+{
+  "name": "Your Day",
+  "short_name": "Your Day",
+  "description": "A paper-style daily planner with habit tracking, study timer, and gym tracker",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1f7a65",
+  "icons": []
+}

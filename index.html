@@ -3,31 +3,64 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Paper Self Assistant</title>
+  <meta name="description" content="A paper-style daily planner with habit tracking, study timer, and gym tracker.">
+  <meta name="theme-color" content="#1f7a65">
+  <title>Your Day</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
 </head>
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <div>
-        <p class="eyebrow">Self Assistant</p>
-        <h1>Paper Planner</h1>
+      <div class="brand-group">
+        <div class="brand">
+          <h1>Your Day</h1>
+        </div>
+        <div class="kebab-menu" id="kebabMenu">
+          <button class="kebab-btn" id="kebabToggle" type="button" aria-label="Menu" title="Menu">
+            <span class="kebab-dot"></span>
+            <span class="kebab-dot"></span>
+            <span class="kebab-dot"></span>
+          </button>
+          <div class="kebab-dropdown" id="kebabDropdown" hidden>
+            <button class="kebab-item" id="themeToggle" type="button">
+              <span class="kebab-icon theme-icon"></span>
+              <span>Dark mode</span>
+            </button>
+            <button class="kebab-item" id="exportData" type="button">
+              <span class="kebab-icon export-icon"></span>
+              <span>Export data</span>
+            </button>
+            <label class="kebab-item">
+              <span class="kebab-icon import-icon"></span>
+              <span>Import data</span>
+              <input type="file" id="importData" accept=".json" hidden>
+            </label>
+          </div>
+        </div>
       </div>
       <div class="month-controls">
-        <button class="icon-button" id="prevMonth" aria-label="Previous month" title="Previous month">&lt;</button>
+        <button class="icon-button" id="prevMonth" aria-label="Previous day" title="Previous day">&lt;</button>
         <label class="month-picker">
-          <span>Month</span>
-          <input type="month" id="monthInput">
+          <span>Date</span>
+          <input type="date" id="monthInput">
         </label>
-        <button class="icon-button" id="nextMonth" aria-label="Next month" title="Next month">&gt;</button>
+        <button class="icon-button" id="nextMonth" aria-label="Next day" title="Next day">&gt;</button>
       </div>
     </header>
 
-    <main class="workspace">
+    <nav class="app-tabs" id="appTabs" aria-label="Your Day sections">
+      <button class="app-tab is-active" type="button" data-tab="day" onclick="window.setActiveTab?.('day')" aria-current="page">Day Tracker</button>
+      <button class="app-tab" type="button" data-tab="study" onclick="window.setActiveTab?.('study')">Study Time</button>
+      <button class="app-tab" type="button" data-tab="gym" onclick="window.setActiveTab?.('gym')">GYM</button>
+    </nav>
+
+    <main class="main-content">
+    <section class="workspace tab-panel is-active" id="dayPanel" data-panel="day">
       <section class="paper planner-panel" aria-labelledby="plannerTitle">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Monthly Habit Tracker</p>
+            <p class="eyebrow">Day Tracker</p>
             <h2 id="plannerTitle">Let's do it!</h2>
           </div>
           <div class="button-group">
@@ -105,7 +138,273 @@
           </div>
         </section>
       </aside>
+    </section>
+
+    <section class="study-workspace tab-panel" id="studyPanel" data-panel="study" hidden>
+      <section class="paper study-timer-panel" aria-labelledby="studyTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Study Time</p>
+            <h2 id="studyTitle">Focus session</h2>
+          </div>
+          <label class="study-date">
+            <span>Session date</span>
+            <input type="date" id="studyDate">
+          </label>
+        </div>
+
+        <div class="study-grid">
+          <section class="study-card study-tasks-card" aria-labelledby="studyTasksTitle">
+            <div class="list-title">
+              <h3 id="studyTasksTitle">Session Tasks</h3>
+              <button class="mini-button" id="addStudyTask" type="button">Add</button>
+            </div>
+            <div id="studyTasks" class="task-stack"></div>
+          </section>
+
+          <section class="study-card timer-card" aria-labelledby="timerTitle">
+            <div class="timer-topline">
+              <div>
+                <p class="eyebrow">Flip clock</p>
+                <h3 id="timerTitle">Stopwatch</h3>
+              </div>
+              <div class="timer-modes" role="group" aria-label="Timer mode">
+                <button class="mini-button is-active" id="modeStopwatch" type="button">Stopwatch</button>
+                <button class="mini-button" id="modeTimer" type="button">Timer</button>
+              </div>
+            </div>
+
+            <div class="duration-row" id="durationRow" hidden>
+              <label>
+                <span>Hours</span>
+                <input type="number" id="timerHours" min="0" max="12" value="0">
+              </label>
+              <label>
+                <span>Minutes</span>
+                <input type="number" id="timerMinutes" min="0" max="59" value="25">
+              </label>
+            </div>
+
+            <div class="flip-clock" id="flipClock" aria-live="polite">
+              <span class="flip-card">00</span>
+              <span class="flip-separator">:</span>
+              <span class="flip-card">00</span>
+              <span class="flip-separator">:</span>
+              <span class="flip-card">00</span>
+            </div>
+
+            <div class="timer-actions" data-timer-actions>
+              <button class="icon-control play-icon" type="button" data-timer-action="start" aria-label="Start" title="Start"></button>
+              <button class="icon-control pause-icon" type="button" data-timer-action="pause" aria-label="Pause" title="Pause"></button>
+              <button class="icon-control reset-icon" type="button" data-timer-action="reset" aria-label="Reset" title="Reset"></button>
+              <button class="icon-control save-icon" type="button" data-timer-action="save" aria-label="Save session" title="Save session"></button>
+              <button class="icon-control fullscreen-icon" type="button" data-timer-action="fullscreen" aria-label="Full screen" title="Full screen"></button>
+            </div>
+          </section>
+
+          <section class="study-card study-stats-card" aria-labelledby="studyStatsTitle">
+            <div class="list-title">
+              <h3 id="studyStatsTitle">Study Stats</h3>
+              <span id="studyTodayTotal">0h 00m today</span>
+            </div>
+            <div class="study-metrics">
+              <div>
+                <span>Today</span>
+                <strong id="studyTodayHours">0h 00m</strong>
+              </div>
+              <div>
+                <span>This week</span>
+                <strong id="studyWeekHours">0h 00m</strong>
+              </div>
+            </div>
+            <div class="study-chart-block">
+              <p class="eyebrow">Today</p>
+              <div class="study-day-graph" id="studyDayGraph"></div>
+            </div>
+            <div class="study-chart-block">
+              <p class="eyebrow">Week</p>
+              <div class="study-week-graph" id="studyWeekGraph"></div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </section>
+
+    <section class="gym-workspace tab-panel" id="gymPanel" data-panel="gym" hidden>
+      <section class="paper gym-panel" aria-labelledby="gymTitle">
+        <div class="section-heading gym-heading">
+          <div>
+            <p class="eyebrow">GYM</p>
+            <h2 id="gymTitle">Health Space</h2>
+          </div>
+        </div>
+
+        <div class="gym-dashboard" id="gymDashboard">
+          <section class="gym-ledger-top" aria-labelledby="gymUserTitle">
+            <button class="gym-user-card" id="gymProfileCard" type="button">
+              <span class="profile-icon large" aria-hidden="true"></span>
+              <strong id="gymUserTitle">User Name</strong>
+            </button>
+            <div class="gym-calorie-target">
+              <span>Target:</span>
+              <strong><span id="gymCaloriesIn">0</span> / <span id="gymCaloriesTarget">2000</span> kcal</strong>
+            </div>
+          </section>
+
+          <section class="gym-ledger-section" aria-labelledby="gymWeekTitle">
+            <div class="gym-section-title">
+              <h3 id="gymWeekTitle">Weekly Health</h3>
+            </div>
+            <div class="health-week-graph" id="gymWeekGraph"></div>
+          </section>
+
+          <section class="gym-ledger-section" aria-labelledby="gymActivityTitle">
+            <div class="gym-section-title">
+              <h3 id="gymActivityTitle">Activity</h3>
+              <button class="edit-icon-button" id="gymActivityEdit" type="button" aria-label="Edit activity">Edit</button>
+            </div>
+            <div class="gym-activity-list" id="gymActivityList"></div>
+            <div class="gym-activity-editor" id="gymActivityEditor" hidden>
+              <div class="activity-edit-list" id="gymActivityEditList"></div>
+              <label>
+                <span>Add task</span>
+                <input type="text" id="gymNewActivity" placeholder="e.g. 20 min cardio">
+              </label>
+
+              <div class="editor-actions">
+                <button class="mini-button" id="gymAddActivity" type="button">Add task</button>
+                <button class="mini-button" id="gymSaveActivity" type="button">Save</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="gym-ledger-section" aria-labelledby="gymDietTitle">
+            <div class="gym-section-title">
+              <h3 id="gymDietTitle">Diet</h3>
+              <div class="diet-actions">
+                <button class="mini-button" id="gymAddMeal" type="button">Add meal</button>
+                <button class="mini-button" id="gymAddFixedMeal" type="button">Fixed meal</button>
+              </div>
+            </div>
+            <div class="diet-table-wrap">
+              <table class="diet-table">
+                <thead>
+                  <tr>
+                    <th>Meal</th>
+                    <th>Protein (g)</th>
+                    <th>Calories (kcal)</th>
+                    <th>Use</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="gymMealRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <form class="gym-profile-form" id="gymProfileForm" hidden>
+          <div class="profile-form-topline">
+            <div>
+              <p class="eyebrow">Profile Setup</p>
+              <h3>Your training details</h3>
+            </div>
+            <button class="mini-button" id="gymProfileCancel" type="button">Back</button>
+          </div>
+
+          <div class="profile-fields">
+            <label>
+              <span>Name</span>
+              <input type="text" id="gymName" placeholder="Your name" required>
+            </label>
+            <label>
+              <span>Height (cm)</span>
+              <input type="number" id="gymHeight" min="80" max="240" placeholder="175">
+            </label>
+            <label>
+              <span>Weight (kg)</span>
+              <input type="number" id="gymWeight" min="20" max="250" placeholder="70">
+            </label>
+            <label>
+              <span>Age</span>
+              <input type="number" id="gymAge" min="8" max="100" placeholder="22">
+            </label>
+            <label>
+              <span>Gender</span>
+              <select id="gymGender">
+                <option value="">Select</option>
+                <option>Male</option>
+                <option>Female</option>
+                <option>Non-binary</option>
+                <option>Prefer not to say</option>
+              </select>
+            </label>
+            <label class="profile-target-field">
+              <span>Target</span>
+              <select id="gymTarget">
+                <option value="">Select</option>
+                <option>Build muscle</option>
+                <option>Lose fat</option>
+                <option>Gain strength</option>
+                <option>Improve stamina</option>
+                <option>Stay consistent</option>
+              </select>
+            </label>
+            <label>
+              <span>Calorie target</span>
+              <select id="gymCalorieChoice">
+                <option value="recommended">Recommended</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="cut">Cut</option>
+                <option value="bulk">Bulk</option>
+                <option value="custom">Custom</option>
+              </select>
+            </label>
+            <label>
+              <span>Custom kcal</span>
+              <input type="number" id="gymCustomCalories" min="800" max="6000" placeholder="2000">
+            </label>
+          </div>
+
+          <div class="calorie-recommendations">
+            <div>
+              <span>Maintenance</span>
+              <strong id="gymMaintenanceCalories">-- kcal</strong>
+            </div>
+            <div>
+              <span>Cut</span>
+              <strong id="gymCutCalories">-- kcal</strong>
+            </div>
+            <div>
+              <span>Bulk</span>
+              <strong id="gymBulkCalories">-- kcal</strong>
+            </div>
+            <div>
+              <span>Recommended</span>
+              <strong id="gymRecommendedCalories">-- kcal</strong>
+            </div>
+          </div>
+
+          <button class="text-button profile-submit" type="submit">Submit profile</button>
+        </form>
+      </section>
+    </section>
     </main>
+  </div>
+
+  <div class="clock-fullscreen" id="clockFullscreen" hidden>
+    <div class="fullscreen-topbar">
+      <button class="mini-button clock-fullscreen-close" id="clockFullscreenClose" type="button">Close</button>
+      <p class="eyebrow" id="clockFullscreenMode">Stopwatch</p>
+      <button class="mini-button clock-theme-toggle" id="clockThemeToggle" type="button">Dark</button>
+    </div>
+    <div class="flip-clock fullscreen-clock" id="fullscreenClock" aria-live="polite"></div>
+    <div class="timer-actions fullscreen-actions" data-timer-actions>
+      <button class="icon-control play-icon" type="button" data-timer-action="start" aria-label="Start" title="Start"></button>
+      <button class="icon-control pause-icon" type="button" data-timer-action="pause" aria-label="Pause" title="Pause"></button>
+      <button class="icon-control reset-icon" type="button" data-timer-action="reset" aria-label="Reset" title="Reset"></button>
+      <button class="icon-control save-icon" type="button" data-timer-action="save" aria-label="Save session" title="Save session"></button>
+    </div>
   </div>
 
   <button class="assistant-core" id="assistantOpen" type="button" aria-label="Open assistant" aria-controls="assistantOverlay" aria-expanded="false">

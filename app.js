@@ -10,7 +10,9 @@ const defaultHabits = [
 
 const state = loadState();
 let taskEditMode = false;
-let scheduleOpen = false;
+let scheduleOpen = true;
+let timerTicker = null;
+let lastClockText = "";
 
 const els = {
   monthInput: document.querySelector("#monthInput"),
@@ -43,12 +45,75 @@ const els = {
   nextPage: document.querySelector("#nextPage")
 };
 
+els.tabs = document.querySelectorAll("[data-tab]");
+els.panels = document.querySelectorAll("[data-panel]");
+els.appTabs = document.querySelector("#appTabs");
+els.studyDate = document.querySelector("#studyDate");
+els.addStudyTask = document.querySelector("#addStudyTask");
+els.studyTasks = document.querySelector("#studyTasks");
+els.modeTimer = document.querySelector("#modeTimer");
+els.modeStopwatch = document.querySelector("#modeStopwatch");
+els.durationRow = document.querySelector("#durationRow");
+els.timerHours = document.querySelector("#timerHours");
+els.timerMinutes = document.querySelector("#timerMinutes");
+els.flipClock = document.querySelector("#flipClock");
+els.timerTitle = document.querySelector("#timerTitle");
+els.timerActionGroups = document.querySelectorAll("[data-timer-actions]");
+els.clockFullscreen = document.querySelector("#clockFullscreen");
+els.clockFullscreenClose = document.querySelector("#clockFullscreenClose");
+els.clockFullscreenMode = document.querySelector("#clockFullscreenMode");
+els.fullscreenClock = document.querySelector("#fullscreenClock");
+els.studyTodayTotal = document.querySelector("#studyTodayTotal");
+els.studyTodayHours = document.querySelector("#studyTodayHours");
+els.studyWeekHours = document.querySelector("#studyWeekHours");
+els.studyDayGraph = document.querySelector("#studyDayGraph");
+els.studyWeekGraph = document.querySelector("#studyWeekGraph");
+els.gymDashboard = document.querySelector("#gymDashboard");
+els.gymProfileCard = document.querySelector("#gymProfileCard");
+els.gymProfileForm = document.querySelector("#gymProfileForm");
+els.gymProfileCancel = document.querySelector("#gymProfileCancel");
+els.gymUserTitle = document.querySelector("#gymUserTitle");
+els.gymCaloriesIn = document.querySelector("#gymCaloriesIn");
+els.gymCaloriesTarget = document.querySelector("#gymCaloriesTarget");
+els.gymWeekGraph = document.querySelector("#gymWeekGraph");
+els.gymActivityList = document.querySelector("#gymActivityList");
+els.gymActivityEdit = document.querySelector("#gymActivityEdit");
+els.gymActivityEditor = document.querySelector("#gymActivityEditor");
+els.gymActivityEditList = document.querySelector("#gymActivityEditList");
+els.gymNewActivity = document.querySelector("#gymNewActivity");
+
+els.gymAddActivity = document.querySelector("#gymAddActivity");
+els.gymSaveActivity = document.querySelector("#gymSaveActivity");
+els.gymAddMeal = document.querySelector("#gymAddMeal");
+els.gymAddFixedMeal = document.querySelector("#gymAddFixedMeal");
+els.gymMealRows = document.querySelector("#gymMealRows");
+els.gymName = document.querySelector("#gymName");
+els.gymHeight = document.querySelector("#gymHeight");
+els.gymWeight = document.querySelector("#gymWeight");
+els.gymAge = document.querySelector("#gymAge");
+els.gymGender = document.querySelector("#gymGender");
+els.gymTarget = document.querySelector("#gymTarget");
+els.gymCalorieChoice = document.querySelector("#gymCalorieChoice");
+els.gymCustomCalories = document.querySelector("#gymCustomCalories");
+els.gymMaintenanceCalories = document.querySelector("#gymMaintenanceCalories");
+els.gymCutCalories = document.querySelector("#gymCutCalories");
+els.gymBulkCalories = document.querySelector("#gymBulkCalories");
+els.gymRecommendedCalories = document.querySelector("#gymRecommendedCalories");
+els.themeToggle = document.querySelector("#themeToggle");
+els.exportData = document.querySelector("#exportData");
+els.importData = document.querySelector("#importData");
+els.clockThemeToggle = document.querySelector("#clockThemeToggle");
+els.kebabToggle = document.querySelector("#kebabToggle");
+els.kebabDropdown = document.querySelector("#kebabDropdown");
+els.kebabMenu = document.querySelector("#kebabMenu");
+
 function loadState() {
   const now = new Date();
   const today = toDateKey(now);
   const fallback = {
     month: today.slice(0, 7),
     selectedDate: today,
+    activeTab: "day",
     habits: defaultHabits.map((name, index) => ({
       id: uid(),
       name,
@@ -63,15 +128,113 @@ function loadState() {
       }
     ],
     pages: [],
-    pageIndex: 0
+    pageIndex: 0,
+    darkMode: false,
+    study: createDefaultStudyState(today),
+    gym: createDefaultGymState()
   };
 
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return saved ? { ...fallback, ...saved } : fallback;
+    return normalizeState(saved ? { ...fallback, ...saved } : fallback, fallback);
   } catch {
     return fallback;
   }
+}
+
+function createDefaultStudyState(today) {
+  return {
+    selectedDate: today,
+    tasks: {},
+    sessions: [],
+    timer: {
+      mode: "stopwatch",
+      targetMs: 25 * 60 * 1000,
+      accumulatedMs: 0,
+      startedAt: null,
+      running: false,
+      sessionDate: today
+    }
+  };
+}
+
+function createDefaultGymState() {
+  return {
+    profileView: "dashboard",
+    profile: {
+      name: "",
+      height: "",
+      weight: "",
+      age: "",
+      gender: "",
+      target: "",
+      calorieChoice: "recommended",
+      customCalories: ""
+    },
+    targetSteps: 10000,
+    activityEditorOpen: false,
+    activities: createDefaultGymActivities(),
+    meals: {},
+    fixedMeals: []
+  };
+}
+
+function createDefaultGymActivities() {
+  return [
+    { id: "hit-gym", text: "Hit GYM", checks: {} },
+    { id: "steps", text: "Complete 10K steps", checks: {} }
+  ];
+}
+
+function normalizeState(nextState, fallback) {
+  nextState.activeTab = nextState.activeTab || "day";
+  nextState.study = {
+    ...fallback.study,
+    ...(nextState.study || {})
+  };
+  nextState.study.timer = {
+    ...fallback.study.timer,
+    ...(nextState.study.timer || {})
+  };
+  nextState.study.tasks = nextState.study.tasks || {};
+  nextState.study.sessions = nextState.study.sessions || [];
+  nextState.study.selectedDate = nextState.study.selectedDate || nextState.selectedDate || fallback.selectedDate;
+  nextState.gym = {
+    ...fallback.gym,
+    ...(nextState.gym || {})
+  };
+  nextState.gym.profile = {
+    ...fallback.gym.profile,
+    ...(nextState.gym.profile || {})
+  };
+  nextState.gym.profileView = nextState.gym.profileView || "dashboard";
+  nextState.gym.targetSteps = Number(nextState.gym.targetSteps) || fallback.gym.targetSteps;
+  nextState.gym.activityEditorOpen = Boolean(nextState.gym.activityEditorOpen);
+  if (!nextState.gym.activityV2Migrated) {
+    nextState.gym.activities = fallback.gym.activities.map((activity) => ({ ...activity, checks: {} }));
+    nextState.gym.activityV2Migrated = true;
+  }
+  nextState.gym.activities = normalizeGymActivities(nextState.gym.activities, fallback.gym.activities);
+  nextState.gym.meals = nextState.gym.meals || {};
+  nextState.gym.fixedMeals = Array.isArray(nextState.gym.fixedMeals) ? nextState.gym.fixedMeals : [];
+  if (!nextState.gym.emptyDietMigrated) {
+    nextState.gym.meals = {};
+    nextState.gym.emptyDietMigrated = true;
+  }
+  return nextState;
+}
+
+function normalizeGymActivities(activities, fallbackActivities) {
+  const incoming = Array.isArray(activities) ? activities : [];
+  const byId = new Map(incoming.map((activity) => [activity.id, activity]));
+  const defaults = fallbackActivities.map((activity) => ({
+    ...activity,
+    ...(byId.get(activity.id) || {}),
+    text: byId.get(activity.id)?.text || activity.text,
+    checks: byId.get(activity.id)?.checks || {}
+  }));
+  const extras = incoming.filter((activity) => !["hit-gym", "steps"].includes(activity.id));
+  return [...defaults, ...extras];
 }
 
 function saveState() {
@@ -111,24 +274,54 @@ function selectedDayNumber() {
 }
 
 function ensureSelectedDateInMonth() {
-  if (!state.selectedDate.startsWith(state.month)) {
-    state.selectedDate = `${state.month}-01`;
-  }
+  state.month = state.selectedDate.slice(0, 7);
 }
 
 function renderAll() {
   ensureSelectedDateInMonth();
-  els.monthInput.value = state.month;
+  els.monthInput.value = state.selectedDate;
   els.selectedDate.value = state.selectedDate;
+  applyTheme();
+  syncTabs();
   renderHabitTable();
   renderScoreGraph();
   renderDailyTasks();
+  renderStudyTime();
+  renderGym();
   renderChat();
   renderStudyPage();
   syncEditControls();
   syncSchedulePanel();
   saveState();
 }
+
+function syncTabs() {
+  els.tabs.forEach((tab) => {
+    const isActive = tab.dataset.tab === state.activeTab;
+    tab.classList.toggle("is-active", isActive);
+    if (isActive) {
+      tab.setAttribute("aria-current", "page");
+    } else {
+      tab.removeAttribute("aria-current");
+    }
+  });
+
+  els.panels.forEach((panel) => {
+    const isActive = panel.dataset.panel === state.activeTab;
+    panel.hidden = !isActive;
+    panel.classList.toggle("is-active", isActive);
+    panel.style.display = isActive ? "" : "none";
+  });
+}
+
+function setActiveTab(tabName) {
+  const panel = document.querySelector(`[data-panel="${tabName}"]`);
+  if (!panel) return;
+  state.activeTab = tabName;
+  renderAll();
+}
+
+window.setActiveTab = setActiveTab;
 
 function renderHabitTable() {
   const { days } = getMonthParts(state.month);
@@ -213,6 +406,7 @@ function renderDailyTasks() {
       saveState();
     });
     row.querySelector("button").addEventListener("click", () => {
+      if (!confirm("Delete this task?")) return;
       state.secondary[state.selectedDate] = getSecondaryTasks().filter((item) => item.id !== task.id);
       renderAll();
     });
@@ -225,6 +419,468 @@ function getSecondaryTasks() {
     state.secondary[state.selectedDate] = [];
   }
   return state.secondary[state.selectedDate];
+}
+
+function getStudyTasks() {
+  if (!state.study.tasks[state.study.selectedDate]) {
+    state.study.tasks[state.study.selectedDate] = [];
+  }
+  return state.study.tasks[state.study.selectedDate];
+}
+
+function renderStudyTime() {
+  if (!els.studyDate) return;
+
+  els.studyDate.value = state.study.selectedDate;
+  renderStudyTasks();
+  renderTimerControls();
+  renderStudyStats();
+}
+
+function renderGym() {
+  if (!els.gymDashboard) return;
+
+  const profile = state.gym.profile;
+  const hasName = Boolean(profile.name);
+  const caloriePlan = calculateCaloriePlan(profile);
+  const targetCalories = getGymTargetCalories(caloriePlan);
+  const caloriesIn = getGymCaloriesIn(gymDateKey());
+
+  els.gymDashboard.hidden = state.gym.profileView !== "dashboard";
+  els.gymProfileForm.hidden = state.gym.profileView !== "form";
+  els.gymUserTitle.textContent = hasName ? profile.name : "User Name";
+  els.gymCaloriesIn.textContent = caloriesIn;
+  els.gymCaloriesTarget.textContent = targetCalories || 2000;
+  els.gymActivityEditor.hidden = !state.gym.activityEditorOpen;
+
+
+  els.gymName.value = profile.name || "";
+  els.gymHeight.value = profile.height || "";
+  els.gymWeight.value = profile.weight || "";
+  els.gymAge.value = profile.age || "";
+  els.gymGender.value = profile.gender || "";
+  els.gymTarget.value = profile.target || "";
+  els.gymCalorieChoice.value = profile.calorieChoice || "recommended";
+  els.gymCustomCalories.value = profile.customCalories || "";
+  els.gymMaintenanceCalories.textContent = caloriePlan.maintenance ? `${caloriePlan.maintenance} kcal` : "-- kcal";
+  els.gymCutCalories.textContent = caloriePlan.cut ? `${caloriePlan.cut} kcal` : "-- kcal";
+  els.gymBulkCalories.textContent = caloriePlan.bulk ? `${caloriePlan.bulk} kcal` : "-- kcal";
+  els.gymRecommendedCalories.textContent = caloriePlan.recommended ? `${caloriePlan.recommended} kcal` : "-- kcal";
+
+  renderGymActivities();
+  renderGymActivityEditor();
+  renderGymMeals();
+  renderGymWeekGraph();
+}
+
+function updateGymCalorieHeader() {
+  const caloriesIn = getGymCaloriesIn(gymDateKey());
+  els.gymCaloriesIn.textContent = caloriesIn;
+  els.gymCaloriesTarget.textContent = getGymTargetCalories() || 2000;
+  renderGymWeekGraph();
+}
+
+function showGymProfileForm() {
+  state.gym.profileView = "form";
+  renderGym();
+  saveState();
+  els.gymName.focus();
+}
+
+function showGymDashboard() {
+  state.gym.profileView = "dashboard";
+  renderGym();
+  saveState();
+}
+
+function gymDateKey() {
+  return state.selectedDate || toDateKey(new Date());
+}
+
+function getGymMeals() {
+  const key = gymDateKey();
+  if (!state.gym.meals[key]) {
+    state.gym.meals[key] = state.gym.fixedMeals.map((meal) => ({
+      id: uid(),
+      fixedId: meal.fixedId || meal.id,
+      name: meal.name,
+      protein: Number(meal.protein) || 0,
+      calories: Number(meal.calories) || 0,
+      fixed: true,
+      enabled: false
+    }));
+  }
+  return state.gym.meals[key];
+}
+
+function getActivityText(activity) {
+  return activity.text;
+}
+
+function renderGymActivities() {
+  const key = gymDateKey();
+  els.gymActivityList.innerHTML = state.gym.activities.map((activity) => {
+    const checked = Boolean(activity.checks?.[key]);
+    return `
+      <button class="activity-check${checked ? " is-checked" : ""}" type="button" data-activity="${activity.id}">
+        <span class="tick-circle" aria-hidden="true"></span>
+        <span>${escapeHtml(getActivityText(activity))}</span>
+      </button>
+    `;
+  }).join("");
+}
+
+function renderGymActivityEditor() {
+  els.gymActivityEditList.innerHTML = state.gym.activities.map((activity) => `
+    <label class="activity-edit-row">
+      <span>Task</span>
+      <input type="text" value="${escapeHtml(getActivityText(activity))}" data-edit-activity="${activity.id}">
+    </label>
+  `).join("");
+}
+
+function renderGymMeals() {
+  els.gymMealRows.innerHTML = getGymMeals().map((meal) => `
+    <tr data-meal="${meal.id}">
+      <td><input type="text" value="${escapeHtml(meal.name)}" data-meal-field="name" aria-label="Meal name"></td>
+      <td><input type="number" min="0" value="${Number(meal.protein) || 0}" data-meal-field="protein" aria-label="Protein grams"></td>
+      <td><input type="number" min="0" value="${Number(meal.calories) || 0}" data-meal-field="calories" aria-label="Calories"></td>
+      <td><button class="meal-toggle${meal.enabled !== false ? " is-enabled" : ""}" type="button" data-toggle-meal="${meal.id}" aria-label="Enable meal"></button></td>
+      <td><button type="button" data-delete-meal="${meal.id}" aria-label="Delete meal">x</button></td>
+    </tr>
+  `).join("");
+}
+
+function getGymCaloriesIn(dateKey) {
+  const meals = state.gym.meals[dateKey] || [];
+  return meals
+    .filter((meal) => meal.enabled !== false)
+    .reduce((total, meal) => total + (Number(meal.calories) || 0), 0);
+}
+
+function getGymActivityScore(dateKey) {
+  if (!state.gym.activities.length) return 0;
+  const completed = state.gym.activities.filter((activity) => activity.checks?.[dateKey]).length;
+  return completed / state.gym.activities.length;
+}
+
+function getGymDietScore(dateKey) {
+  const target = getGymTargetCalories();
+  const eaten = getGymCaloriesIn(dateKey);
+  if (!target || !eaten) return 0;
+  const goal = state.gym.profile.calorieChoice;
+  if (goal === "cut" || state.gym.profile.target === "Lose fat") {
+    return eaten <= target ? Math.min(1, eaten / target) : Math.max(0, 1 - ((eaten - target) / target));
+  }
+  if (goal === "bulk" || state.gym.profile.target === "Build muscle" || state.gym.profile.target === "Gain strength") {
+    return eaten >= target ? 1 : eaten / target;
+  }
+  return Math.max(0, 1 - (Math.abs(eaten - target) / target));
+}
+
+function renderGymWeekGraph() {
+  const weekKeys = getWeekKeys(gymDateKey());
+  els.gymWeekGraph.innerHTML = weekKeys.map((key) => {
+    const activityScore = getGymActivityScore(key);
+    const dietScore = getGymDietScore(key);
+    const score = Math.round(((activityScore + dietScore) / 2) * 100);
+    const label = startOfDay(key).toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2);
+    return `
+      <div class="health-day" title="${label}: ${score}%">
+        <span class="health-bar" style="height: ${Math.max(4, score)}%"></span>
+        <span class="health-label">${label}</span>
+      </div>
+    `;
+  }).join("");
+}
+
+function syncFixedMealFromDaily(meal) {
+  const fixedId = meal.fixedId || meal.id;
+  meal.fixed = true;
+  meal.fixedId = fixedId;
+  const existing = state.gym.fixedMeals.find((item) => item.fixedId === fixedId);
+  const nextMeal = {
+    id: existing?.id || uid(),
+    fixedId,
+    name: meal.name,
+    protein: Number(meal.protein) || 0,
+    calories: Number(meal.calories) || 0
+  };
+  if (existing) {
+    Object.assign(existing, nextMeal);
+  } else {
+    state.gym.fixedMeals.push(nextMeal);
+  }
+}
+
+function calculateCaloriePlan(profile) {
+  const height = Number(profile.height);
+  const weight = Number(profile.weight);
+  const age = Number(profile.age);
+  if (!height || !weight || !age) {
+    return { maintenance: 0, cut: 0, bulk: 0, recommended: 0 };
+  }
+
+  const genderFactor = profile.gender === "Female" ? -161 : 5;
+  const bmr = (10 * weight) + (6.25 * height) - (5 * age) + genderFactor;
+  const maintenance = Math.round(bmr * 1.45);
+  const cut = Math.max(1200, maintenance - 400);
+  const bulk = maintenance + 300;
+  let recommended = maintenance;
+  if (profile.target === "Lose fat") recommended = cut;
+  if (profile.target === "Build muscle" || profile.target === "Gain strength") recommended = bulk;
+  return { maintenance, cut, bulk, recommended };
+}
+
+function getGymTargetCalories(plan = calculateCaloriePlan(state.gym.profile)) {
+  const profile = state.gym.profile;
+  if (profile.calorieChoice === "custom") {
+    return Number(profile.customCalories) || plan.recommended || 2000;
+  }
+  return plan[profile.calorieChoice] || plan.recommended || Number(profile.customCalories) || 2000;
+}
+
+function renderStudyTasks() {
+  els.studyTasks.innerHTML = "";
+  getStudyTasks().forEach((task) => {
+    const row = createTaskRow({ ...task, editable: true, removable: true });
+    row.querySelector("input").addEventListener("change", (event) => {
+      task.checked = event.target.checked;
+      saveState();
+    });
+    row.querySelector("span").addEventListener("input", (event) => {
+      task.text = event.target.textContent.trim();
+      saveState();
+    });
+    row.querySelector("button").addEventListener("click", () => {
+      if (!confirm("Delete this study task?")) return;
+      state.study.tasks[state.study.selectedDate] = getStudyTasks().filter((item) => item.id !== task.id);
+      renderAll();
+    });
+    els.studyTasks.append(row);
+  });
+}
+
+function renderTimerControls() {
+  const timer = state.study.timer;
+  const targetParts = msToParts(timer.targetMs);
+  els.timerTitle.textContent = timer.mode === "timer" ? "Timer" : "Stopwatch";
+  els.timerHours.value = targetParts.hours;
+  els.timerMinutes.value = timer.targetMs <= 0 ? 25 : targetParts.minutes;
+  els.durationRow.hidden = timer.mode !== "timer";
+  els.modeTimer.classList.toggle("is-active", timer.mode === "timer");
+  els.modeStopwatch.classList.toggle("is-active", timer.mode === "stopwatch");
+  syncTimerActionButtons();
+  updateFlipClock();
+}
+
+function syncTimerActionButtons() {
+  document.querySelectorAll("[data-timer-action='start']").forEach((button) => {
+    button.disabled = state.study.timer.running;
+  });
+  document.querySelectorAll("[data-timer-action='pause']").forEach((button) => {
+    button.disabled = !state.study.timer.running && state.study.timer.accumulatedMs === 0;
+  });
+  document.querySelectorAll("[data-timer-action='save']").forEach((button) => {
+    button.disabled = state.study.timer.running || state.study.timer.accumulatedMs === 0;
+  });
+}
+
+function getTimerElapsedMs() {
+  const timer = state.study.timer;
+  const liveMs = timer.running && timer.startedAt ? Date.now() - timer.startedAt : 0;
+  return Math.max(0, timer.accumulatedMs + liveMs);
+}
+
+function getTimerDisplayMs() {
+  const elapsedMs = getTimerElapsedMs();
+  if (state.study.timer.mode === "timer") {
+    return Math.max(0, state.study.timer.targetMs - elapsedMs);
+  }
+  return elapsedMs;
+}
+
+function updateFlipClock() {
+  const displayMs = getTimerDisplayMs();
+  const parts = msToParts(displayMs);
+  const clockText = `${String(parts.hours).padStart(2, "0")}:${String(parts.minutes).padStart(2, "0")}:${String(parts.seconds).padStart(2, "0")}`;
+  const changed = clockText !== lastClockText && lastClockText !== "";
+  lastClockText = clockText;
+  const markup = makeClockMarkup(parts, changed);
+  els.flipClock.innerHTML = markup;
+  els.fullscreenClock.innerHTML = markup;
+  els.clockFullscreenMode.textContent = state.study.timer.mode === "timer" ? "Timer" : "Stopwatch";
+
+  if (state.study.timer.running && state.study.timer.mode === "timer" && displayMs <= 0) {
+    pauseStudyTimer();
+  }
+}
+
+function makeClockMarkup(parts, animate) {
+  const flipClass = animate ? " is-ticking" : "";
+  return `
+    <span class="flip-card${flipClass}">${String(parts.hours).padStart(2, "0")}</span>
+    <span class="flip-separator">:</span>
+    <span class="flip-card${flipClass}">${String(parts.minutes).padStart(2, "0")}</span>
+    <span class="flip-separator">:</span>
+    <span class="flip-card${flipClass}">${String(parts.seconds).padStart(2, "0")}</span>
+  `;
+}
+
+function msToParts(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return { hours, minutes, seconds };
+}
+
+function formatStudyDuration(ms) {
+  const totalMinutes = Math.floor(ms / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+}
+
+function startOfDay(dateKey) {
+  return new Date(`${dateKey}T00:00:00`);
+}
+
+function dateKeyFromOffset(dateKey, offset) {
+  const date = startOfDay(dateKey);
+  date.setDate(date.getDate() + offset);
+  return toDateKey(date);
+}
+
+function getStudyTotalForDate(dateKey, includeActive = true) {
+  const savedMs = state.study.sessions
+    .filter((session) => session.date === dateKey)
+    .reduce((total, session) => total + session.durationMs, 0);
+  const timer = state.study.timer;
+  const activeMs = includeActive && timer.sessionDate === dateKey ? getTimerElapsedMs() : 0;
+  return savedMs + activeMs;
+}
+
+function getWeekKeys(dateKey) {
+  const date = startOfDay(dateKey);
+  const day = date.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  return Array.from({ length: 7 }, (_, index) => dateKeyFromOffset(dateKey, mondayOffset + index));
+}
+
+function renderStudyStats() {
+  const todayTotal = getStudyTotalForDate(state.study.selectedDate);
+  const weekKeys = getWeekKeys(state.study.selectedDate);
+  const weekTotal = weekKeys.reduce((total, key) => total + getStudyTotalForDate(key), 0);
+
+  els.studyTodayTotal.textContent = `${formatStudyDuration(todayTotal)} today`;
+  els.studyTodayHours.textContent = formatStudyDuration(todayTotal);
+  els.studyWeekHours.textContent = formatStudyDuration(weekTotal);
+  renderStudyDayGraph(todayTotal);
+  renderStudyWeekGraph(weekKeys);
+}
+
+function renderStudyDayGraph(totalMs) {
+  const maxHours = 6;
+  const studiedHours = totalMs / 3600000;
+  els.studyDayGraph.innerHTML = Array.from({ length: maxHours }, (_, index) => {
+    const hour = index + 1;
+    const height = Math.min(100, Math.max(3, (studiedHours / hour) * 100));
+    const filled = studiedHours >= hour ? 100 : height;
+    return `
+      <div class="study-bar-item" title="${hour} hour target">
+        <span class="study-bar" style="height: ${filled}%"></span>
+        <span class="study-bar-label">${hour}h</span>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderStudyWeekGraph(weekKeys) {
+  const totals = weekKeys.map((key) => getStudyTotalForDate(key));
+  const maxTotal = Math.max(...totals, 60 * 60 * 1000);
+  els.studyWeekGraph.innerHTML = weekKeys.map((key, index) => {
+    const height = Math.max(3, Math.round((totals[index] / maxTotal) * 100));
+    const label = startOfDay(key).toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2);
+    return `
+      <div class="study-bar-item" title="${label}: ${formatStudyDuration(totals[index])}">
+        <span class="study-bar" style="height: ${height}%"></span>
+        <span class="study-bar-label">${label}</span>
+      </div>
+    `;
+  }).join("");
+}
+
+function updateTimerTargetFromInputs() {
+  const hours = Math.max(0, Number(els.timerHours.value) || 0);
+  const minutes = Math.max(0, Number(els.timerMinutes.value) || 0);
+  const totalMinutes = Math.max(1, (hours * 60) + minutes);
+  state.study.timer.targetMs = totalMinutes * 60 * 1000;
+}
+
+function startStudyTimer() {
+  const timer = state.study.timer;
+  if (timer.running) return;
+  if (timer.mode === "timer") {
+    updateTimerTargetFromInputs();
+  }
+  timer.startedAt = Date.now();
+  timer.running = true;
+  timer.sessionDate = state.study.selectedDate;
+  saveState();
+  renderStudyTime();
+  startTimerTicker();
+}
+
+function pauseStudyTimer() {
+  const timer = state.study.timer;
+  if (timer.running) {
+    timer.accumulatedMs = getTimerElapsedMs();
+    timer.startedAt = null;
+    timer.running = false;
+    saveState();
+  }
+  renderStudyTime();
+}
+
+function resetStudyTimer() {
+  state.study.timer.accumulatedMs = 0;
+  state.study.timer.startedAt = null;
+  state.study.timer.running = false;
+  state.study.timer.sessionDate = state.study.selectedDate;
+  saveState();
+  renderStudyTime();
+}
+
+function saveStudySession() {
+  pauseStudyTimer();
+  const durationMs = state.study.timer.accumulatedMs;
+  if (durationMs <= 0) return;
+  state.study.sessions.push({
+    id: uid(),
+    date: state.study.timer.sessionDate || state.study.selectedDate,
+    durationMs,
+    mode: state.study.timer.mode,
+    savedAt: new Date().toISOString()
+  });
+  state.study.timer.accumulatedMs = 0;
+  state.study.timer.sessionDate = state.study.selectedDate;
+  saveState();
+  renderStudyTime();
+}
+
+function startTimerTicker() {
+  if (timerTicker) return;
+  timerTicker = window.setInterval(() => {
+    if (!state.study.timer.running) {
+      window.clearInterval(timerTicker);
+      timerTicker = null;
+      return;
+    }
+    updateFlipClock();
+    renderStudyStats();
+    saveState();
+  }, 1000);
 }
 
 function renderScoreGraph() {
@@ -270,26 +926,6 @@ function setAssistantOpen(isOpen) {
   if (isOpen) {
     els.chatInput.focus();
   }
-}
-
-function assistantReply(input) {
-  const openPrimary = state.habits.filter((habit) => !habit.checks[state.selectedDate]).length;
-  const openSecondary = getSecondaryTasks().filter((task) => !task.checked).length;
-  const lower = input.toLowerCase();
-
-  if (lower.includes("study") || lower.includes("learn") || lower.includes("topic")) {
-    return "Add the topic in the Learning Desk. I will prepare 10 notebook-style pages with small visual diagrams for revision.";
-  }
-
-  if (lower.includes("today") || lower.includes("plan")) {
-    return `For ${els.selectedDayLabel.textContent}, you have ${openPrimary} primary habit(s) and ${openSecondary} secondary task(s) open. Start with the smallest one to build momentum.`;
-  }
-
-  if (lower.includes("habit")) {
-    return "Keep primary habits stable and repeatable. Use secondary tasks only for things that belong to this specific day.";
-  }
-
-  return "I can help organize tasks, suggest a daily order, or turn a learning topic into notebook pages.";
 }
 
 function makePages(topic) {
@@ -475,25 +1111,34 @@ function escapeHtml(value) {
 }
 
 els.monthInput.addEventListener("change", (event) => {
-  state.month = event.target.value;
-  ensureSelectedDateInMonth();
+  state.selectedDate = event.target.value;
+  state.month = state.selectedDate.slice(0, 7);
+  scheduleOpen = true;
   renderAll();
 });
 
 els.prevMonth.addEventListener("click", () => {
-  const [year, month] = state.month.split("-").map(Number);
-  const date = new Date(year, month - 2, 1);
-  state.month = toDateKey(date).slice(0, 7);
-  ensureSelectedDateInMonth();
+  const date = new Date(`${state.selectedDate}T12:00:00`);
+  date.setDate(date.getDate() - 1);
+  state.selectedDate = toDateKey(date);
+  state.month = state.selectedDate.slice(0, 7);
+  scheduleOpen = true;
   renderAll();
 });
 
 els.nextMonth.addEventListener("click", () => {
-  const [year, month] = state.month.split("-").map(Number);
-  const date = new Date(year, month, 1);
-  state.month = toDateKey(date).slice(0, 7);
-  ensureSelectedDateInMonth();
+  const date = new Date(`${state.selectedDate}T12:00:00`);
+  date.setDate(date.getDate() + 1);
+  state.selectedDate = toDateKey(date);
+  state.month = state.selectedDate.slice(0, 7);
+  scheduleOpen = true;
   renderAll();
+});
+
+els.appTabs.addEventListener("click", (event) => {
+  const tab = event.target.closest("[data-tab]");
+  if (!tab) return;
+  setActiveTab(tab.dataset.tab);
 });
 
 els.selectedDate.addEventListener("change", (event) => {
@@ -516,6 +1161,7 @@ els.primaryTable.addEventListener("click", (event) => {
   }
 
   if (deleteButton && taskEditMode) {
+    if (!confirm("Delete this habit? This cannot be undone.")) return;
     state.habits = state.habits.filter((habit) => habit.id !== deleteButton.dataset.deleteHabit);
     renderAll();
   }
@@ -564,13 +1210,270 @@ els.addSecondary.addEventListener("click", () => {
   renderAll();
 });
 
-els.chatForm.addEventListener("submit", (event) => {
+els.studyDate.addEventListener("change", (event) => {
+  state.study.selectedDate = event.target.value;
+  renderAll();
+});
+
+els.addStudyTask.addEventListener("click", () => {
+  getStudyTasks().push({
+    id: uid(),
+    text: "New study task",
+    checked: false
+  });
+  renderAll();
+});
+
+els.modeTimer.addEventListener("click", () => {
+  if (state.study.timer.running) return;
+  state.study.timer.mode = "timer";
+  updateTimerTargetFromInputs();
+  saveState();
+  renderStudyTime();
+});
+
+els.modeStopwatch.addEventListener("click", () => {
+  if (state.study.timer.running) return;
+  state.study.timer.mode = "stopwatch";
+  saveState();
+  renderStudyTime();
+});
+
+[els.timerHours, els.timerMinutes].forEach((input) => {
+  input.addEventListener("change", () => {
+    if (state.study.timer.running) return;
+    updateTimerTargetFromInputs();
+    saveState();
+    renderStudyTime();
+  });
+});
+
+els.timerActionGroups.forEach((group) => {
+  group.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-timer-action]");
+    if (!button) return;
+    const action = button.dataset.timerAction;
+    if (action === "start") startStudyTimer();
+    if (action === "pause") pauseStudyTimer();
+    if (action === "reset") resetStudyTimer();
+    if (action === "save") saveStudySession();
+    if (action === "fullscreen") {
+      els.clockFullscreen.hidden = false;
+      updateFlipClock();
+    }
+  });
+});
+
+els.clockFullscreenClose.addEventListener("click", () => {
+  els.clockFullscreen.hidden = true;
+});
+
+els.gymProfileCard.addEventListener("click", showGymProfileForm);
+
+els.gymProfileCancel.addEventListener("click", showGymDashboard);
+
+els.gymActivityList.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-activity]");
+  if (!button) return;
+  const activity = state.gym.activities.find((item) => item.id === button.dataset.activity);
+  if (!activity) return;
+  if (!activity.checks) activity.checks = {};
+  const key = gymDateKey();
+  activity.checks[key] = !activity.checks[key];
+  renderGym();
+  saveState();
+});
+
+els.gymActivityEdit.addEventListener("click", () => {
+  state.gym.activityEditorOpen = !state.gym.activityEditorOpen;
+  renderGym();
+  saveState();
+});
+
+els.gymAddActivity.addEventListener("click", () => {
+  const text = els.gymNewActivity.value.trim();
+  if (!text) return;
+  state.gym.activities.push({
+    id: uid(),
+    text,
+    locked: false,
+    checks: {}
+  });
+  els.gymNewActivity.value = "";
+  renderGym();
+  saveState();
+});
+
+els.gymSaveActivity.addEventListener("click", () => {
+
+  state.gym.activityEditorOpen = false;
+  renderGym();
+  saveState();
+});
+
+els.gymActivityEditList.addEventListener("input", (event) => {
+  const activityId = event.target.dataset.editActivity;
+  if (!activityId) return;
+  const activity = state.gym.activities.find((item) => item.id === activityId);
+  if (!activity) return;
+  activity.text = event.target.value.trim() || "New activity";
+  renderGymActivities();
+  saveState();
+});
+
+els.gymAddMeal.addEventListener("click", () => {
+  getGymMeals().push({
+    id: uid(),
+    name: "<New Meal Name>",
+    protein: 0,
+    calories: 0
+  });
+  renderGym();
+  saveState();
+});
+
+els.gymAddFixedMeal.addEventListener("click", () => {
+  const meals = getGymMeals();
+  if (!meals.length) {
+    meals.push({
+      id: uid(),
+      name: "<Fixed Meal Name>",
+      protein: 0,
+      calories: 0,
+      fixed: true,
+      enabled: false
+    });
+  } else {
+    state.gym.fixedMeals = meals.map((meal) => ({
+      id: uid(),
+      fixedId: meal.fixedId || uid(),
+      name: meal.name,
+      protein: Number(meal.protein) || 0,
+      calories: Number(meal.calories) || 0
+    }));
+  }
+  renderGym();
+  saveState();
+});
+
+els.gymMealRows.addEventListener("input", (event) => {
+  const field = event.target.dataset.mealField;
+  if (!field) return;
+  const row = event.target.closest("[data-meal]");
+  const meal = getGymMeals().find((item) => item.id === row.dataset.meal);
+  if (!meal) return;
+  meal[field] = field === "name" ? event.target.value : Math.max(0, Number(event.target.value) || 0);
+  if (meal.fixed || meal.fixedId) {
+    syncFixedMealFromDaily(meal);
+  }
+  updateGymCalorieHeader();
+  saveState();
+});
+
+els.gymMealRows.addEventListener("click", (event) => {
+  const toggleButton = event.target.closest("[data-toggle-meal]");
+  if (toggleButton) {
+    const meal = getGymMeals().find((item) => item.id === toggleButton.dataset.toggleMeal);
+    if (!meal) return;
+    meal.enabled = meal.enabled === false;
+    updateGymCalorieHeader();
+    renderGymMeals();
+    saveState();
+    return;
+  }
+
+  const deleteButton = event.target.closest("[data-delete-meal]");
+  if (!deleteButton) return;
+  if (!confirm("Delete this meal?")) return;
+  const key = gymDateKey();
+  state.gym.meals[key] = getGymMeals().filter((meal) => meal.id !== deleteButton.dataset.deleteMeal);
+  renderGym();
+  saveState();
+});
+
+[els.gymHeight, els.gymWeight, els.gymAge, els.gymGender, els.gymTarget, els.gymCalorieChoice, els.gymCustomCalories].forEach((input) => {
+  input.addEventListener("input", () => {
+    const draftProfile = {
+      name: els.gymName.value.trim(),
+      height: els.gymHeight.value.trim(),
+      weight: els.gymWeight.value.trim(),
+      age: els.gymAge.value.trim(),
+      gender: els.gymGender.value,
+      target: els.gymTarget.value,
+      calorieChoice: els.gymCalorieChoice.value,
+      customCalories: els.gymCustomCalories.value.trim()
+    };
+    const plan = calculateCaloriePlan(draftProfile);
+    els.gymMaintenanceCalories.textContent = plan.maintenance ? `${plan.maintenance} kcal` : "-- kcal";
+    els.gymCutCalories.textContent = plan.cut ? `${plan.cut} kcal` : "-- kcal";
+    els.gymBulkCalories.textContent = plan.bulk ? `${plan.bulk} kcal` : "-- kcal";
+    els.gymRecommendedCalories.textContent = plan.recommended ? `${plan.recommended} kcal` : "-- kcal";
+  });
+});
+
+els.gymProfileForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  state.gym.profile = {
+    name: els.gymName.value.trim(),
+    height: els.gymHeight.value.trim(),
+    weight: els.gymWeight.value.trim(),
+    age: els.gymAge.value.trim(),
+    gender: els.gymGender.value,
+    target: els.gymTarget.value,
+    calorieChoice: els.gymCalorieChoice.value,
+    customCalories: els.gymCustomCalories.value.trim()
+  };
+  state.gym.profileView = "dashboard";
+  saveState();
+  renderGym();
+});
+
+els.chatForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const text = els.chatInput.value.trim();
   if (!text) return;
+  
+  // Add user message immediately
   state.chat.push({ from: "user", text });
-  state.chat.push({ from: "bot", text: assistantReply(text) });
   els.chatInput.value = "";
+  renderAll();
+
+  // Add temporary typing indicator (optional but good for UX)
+  state.chat.push({ from: "bot", text: "..." });
+  renderAll();
+
+  try {
+    const openPrimary = state.habits.filter((habit) => !habit.checks[state.selectedDate]).length;
+    const openSecondary = getSecondaryTasks().filter((task) => !task.checked).length;
+
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        message: text,
+        context: {
+          date: els.selectedDayLabel.textContent,
+          openPrimary,
+          openSecondary
+        }
+      })
+    });
+
+    // Remove typing indicator
+    state.chat.pop();
+
+    if (response.ok) {
+      const data = await response.json();
+      state.chat.push({ from: "bot", text: data.reply });
+    } else {
+      // If API fails (e.g. not hosted on Vercel yet, or missing keys)
+      state.chat.push({ from: "bot", text: "⚠️ API Error: Please ensure you are hosted on Vercel and your .env AI keys are configured." });
+    }
+  } catch (error) {
+    state.chat.pop();
+    state.chat.push({ from: "bot", text: "⚠️ Offline or network error. Please check your connection." });
+  }
+  
   renderAll();
 });
 
@@ -608,3 +1511,84 @@ els.nextPage.addEventListener("click", () => {
 });
 
 renderAll();
+startTimerTicker();
+
+// Auto-resume timer if it was running when page closed
+if (state.study.timer.running && state.study.timer.startedAt) {
+  startTimerTicker();
+}
+
+// ── Kebab Menu ────────────────────────────────────────
+
+els.kebabToggle.addEventListener("click", () => {
+  const isOpen = els.kebabDropdown.hidden;
+  els.kebabDropdown.hidden = !isOpen;
+});
+
+document.addEventListener("click", (event) => {
+  if (!els.kebabMenu.contains(event.target)) {
+    els.kebabDropdown.hidden = true;
+  }
+});
+
+// ── Dark Mode ──────────────────────────────────────────
+
+function applyTheme() {
+  document.documentElement.setAttribute("data-theme", state.darkMode ? "dark" : "light");
+  const label = els.themeToggle.querySelector("span:last-child");
+  if (label) label.textContent = state.darkMode ? "Light mode" : "Dark mode";
+}
+
+els.themeToggle.addEventListener("click", () => {
+  state.darkMode = !state.darkMode;
+  applyTheme();
+  saveState();
+});
+
+// ── Fullscreen Dark/Light Toggle ──────────────────────
+
+els.clockThemeToggle.addEventListener("click", () => {
+  const fs = els.clockFullscreen;
+  const isDark = fs.classList.toggle("is-dark");
+  els.clockThemeToggle.textContent = isDark ? "Light" : "Dark";
+});
+
+// ── Data Export ───────────────────────────────────────
+
+els.exportData.addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `your-day-backup-${toDateKey(new Date())}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ── Data Import ───────────────────────────────────────
+
+els.importData.addEventListener("change", (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!confirm("This will replace all your current data. Continue?")) return;
+      const today = toDateKey(new Date());
+      const fallback = { ...state };
+      Object.assign(state, normalizeState({ ...fallback, ...imported }, fallback));
+      renderAll();
+    } catch {
+      alert("Invalid backup file.");
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = "";
+});
+
+// ── Service Worker ────────────────────────────────────
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
