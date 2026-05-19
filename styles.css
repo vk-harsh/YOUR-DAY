@@ -1766,6 +1766,13 @@ html[data-theme="dark"] .theme-icon::before {
     padding-bottom: 92px;
   }
 
+  .workspace,
+  .study-workspace,
+  .gym-workspace {
+    flex-direction: column;
+    gap: 16px;
+  }
+
   .topbar,
   .brand,
   .study-grid,
@@ -1812,6 +1819,8 @@ html[data-theme="dark"] .theme-icon::before {
   }
 
   .side-rail {
+    flex: none;
+    width: 100%;
     grid-template-columns: 1fr;
   }
 
