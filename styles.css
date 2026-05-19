@@ -1773,6 +1773,38 @@ html[data-theme="dark"] .theme-icon::before {
     gap: 16px;
   }
 
+  .workspace > *,
+  .study-workspace > *,
+  .gym-workspace > * {
+    min-width: 0;
+  }
+
+  .paper {
+    padding: 16px 14px 16px 28px !important;
+  }
+
+  .paper::before {
+    left: 6px !important;
+    width: 14px !important;
+    background-size: 14px 44px !important;
+  }
+
+  .section-heading,
+  .score-board,
+  .daily-area {
+    padding-left: 0 !important;
+  }
+
+  .score-board {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .score-chart,
+  .tracker-wrap {
+    min-width: 0;
+  }
+
   .topbar,
   .brand,
   .study-grid,
@@ -1847,6 +1879,10 @@ html[data-theme="dark"] .theme-icon::before {
     box-shadow: var(--shadow), 4px 4px 0 rgba(31, 37, 35, 0.07);
   }
 
+  .study-grid {
+    gap: 16px;
+  }
+
   .section-heading,
   .daily-area,
   .score-board,
@@ -1859,7 +1895,7 @@ html[data-theme="dark"] .theme-icon::before {
   .study-page,
   .page-actions,
   .placeholder-panel {
-    padding-left: 22px;
+    padding-left: 0;
     margin-left: 0;
   }
 
