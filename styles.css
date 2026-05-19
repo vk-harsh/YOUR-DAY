@@ -1771,16 +1771,20 @@ html[data-theme="dark"] .theme-icon::before {
   .gym-workspace {
     flex-direction: column;
     gap: 16px;
+    max-width: 100%;
   }
 
   .workspace > *,
   .study-workspace > *,
   .gym-workspace > * {
     min-width: 0;
+    max-width: 100%;
   }
 
   .paper {
     padding: 16px 14px 16px 28px !important;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .paper::before {
