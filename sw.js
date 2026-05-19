@@ -1,4 +1,4 @@
-const CACHE_NAME = "your-day-v2";
+const CACHE_NAME = "your-day-v3";
 const ASSETS = ["./", "./index.html", "./styles.css", "./app.js", "./manifest.json"];
 
 self.addEventListener("install", (event) => {
@@ -19,6 +19,11 @@ self.addEventListener("activate", (event) => {
 
 // Network-first strategy for easier development and updates
 self.addEventListener("fetch", (event) => {
+  // Do not cache API requests or non-GET requests
+  if (event.request.method !== "GET" || event.request.url.includes("/api/")) {
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
