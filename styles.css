@@ -1132,10 +1132,10 @@ html[data-theme="dark"] .theme-icon::before {
 }
 
 .gym-ledger-top {
-  display: grid;
-  grid-template-columns: minmax(260px, 440px) minmax(260px, 1fr);
-  gap: 70px;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  gap: 24px;
   margin-bottom: 16px;
 }
 
