@@ -93,7 +93,6 @@ els.gymWeight = document.querySelector("#gymWeight");
 els.gymAge = document.querySelector("#gymAge");
 els.gymGender = document.querySelector("#gymGender");
 els.gymTarget = document.querySelector("#gymTarget");
-els.gymCalorieChoice = document.querySelector("#gymCalorieChoice");
 els.gymCustomCalories = document.querySelector("#gymCustomCalories");
 els.gymMaintenanceCalories = document.querySelector("#gymMaintenanceCalories");
 els.gymCutCalories = document.querySelector("#gymCutCalories");
@@ -169,7 +168,6 @@ function createDefaultGymState() {
       age: "",
       gender: "",
       target: "",
-      calorieChoice: "recommended",
       customCalories: ""
     },
     targetSteps: 10000,
@@ -461,7 +459,6 @@ function renderGym() {
   els.gymAge.value = profile.age || "";
   els.gymGender.value = profile.gender || "";
   els.gymTarget.value = profile.target || "";
-  els.gymCalorieChoice.value = profile.calorieChoice || "recommended";
   els.gymCustomCalories.value = profile.customCalories || "";
   els.gymMaintenanceCalories.textContent = caloriePlan.maintenance ? `${caloriePlan.maintenance} kcal` : "-- kcal";
   els.gymCutCalories.textContent = caloriePlan.cut ? `${caloriePlan.cut} kcal` : "-- kcal";
@@ -572,11 +569,11 @@ function getGymDietScore(dateKey) {
   const target = getGymTargetCalories();
   const eaten = getGymCaloriesIn(dateKey);
   if (!target || !eaten) return 0;
-  const goal = state.gym.profile.calorieChoice;
-  if (goal === "cut" || state.gym.profile.target === "Lose fat") {
+  const profileTarget = state.gym.profile.target ? state.gym.profile.target.toLowerCase() : "";
+  if (profileTarget === "cut") {
     return eaten <= target ? Math.min(1, eaten / target) : Math.max(0, 1 - ((eaten - target) / target));
   }
-  if (goal === "bulk" || state.gym.profile.target === "Build muscle" || state.gym.profile.target === "Gain strength") {
+  if (profileTarget === "bulk") {
     return eaten >= target ? 1 : eaten / target;
   }
   return Math.max(0, 1 - (Math.abs(eaten - target) / target));
@@ -631,16 +628,17 @@ function calculateCaloriePlan(profile) {
   const cut = Math.max(1200, maintenance - 400);
   const bulk = maintenance + 300;
   let recommended = maintenance;
-  if (profile.target === "Lose fat") recommended = cut;
-  if (profile.target === "Build muscle" || profile.target === "Gain strength") recommended = bulk;
+  const target = profile.target ? profile.target.toLowerCase() : "";
+  if (target === "cut") recommended = cut;
+  if (target === "bulk") recommended = bulk;
   return { maintenance, cut, bulk, recommended };
 }
 
 function getGymTargetCalories(plan = calculateCaloriePlan(state.gym.profile), profile = state.gym.profile) {
-  if (profile.calorieChoice === "custom") {
-    return Number(profile.customCalories) || plan.recommended || 2000;
+  if (profile.customCalories && Number(profile.customCalories) > 0) {
+    return Number(profile.customCalories);
   }
-  return plan[profile.calorieChoice] || plan.recommended || Number(profile.customCalories) || 2000;
+  return plan.recommended || 2000;
 }
 
 function renderStudyTasks() {
@@ -1394,12 +1392,8 @@ els.gymMealRows.addEventListener("click", (event) => {
   saveState();
 });
 
-[els.gymHeight, els.gymWeight, els.gymAge, els.gymGender, els.gymTarget, els.gymCalorieChoice, els.gymCustomCalories].forEach((input) => {
+[els.gymHeight, els.gymWeight, els.gymAge, els.gymGender, els.gymTarget, els.gymCustomCalories].forEach((input) => {
   input.addEventListener("input", (event) => {
-    if (event.target === els.gymCustomCalories && els.gymCustomCalories.value.trim() !== "") {
-      els.gymCalorieChoice.value = "custom";
-    }
-
     const draftProfile = {
       name: els.gymName.value.trim(),
       height: els.gymHeight.value.trim(),
@@ -1407,7 +1401,6 @@ els.gymMealRows.addEventListener("click", (event) => {
       age: els.gymAge.value.trim(),
       gender: els.gymGender.value,
       target: els.gymTarget.value,
-      calorieChoice: els.gymCalorieChoice.value,
       customCalories: els.gymCustomCalories.value.trim()
     };
     const plan = calculateCaloriePlan(draftProfile);
@@ -1432,7 +1425,6 @@ els.gymProfileForm.addEventListener("submit", (event) => {
     age: els.gymAge.value.trim(),
     gender: els.gymGender.value,
     target: els.gymTarget.value,
-    calorieChoice: els.gymCalorieChoice.value,
     customCalories: els.gymCustomCalories.value.trim()
   };
   state.gym.profileView = "dashboard";
