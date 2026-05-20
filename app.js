@@ -75,6 +75,7 @@ els.gymProfileCancel = document.querySelector("#gymProfileCancel");
 els.gymUserTitle = document.querySelector("#gymUserTitle");
 els.gymCaloriesIn = document.querySelector("#gymCaloriesIn");
 els.gymCaloriesTarget = document.querySelector("#gymCaloriesTarget");
+els.gymProteinIn = document.querySelector("#gymProteinIn");
 els.gymWeekGraph = document.querySelector("#gymWeekGraph");
 els.gymActivityList = document.querySelector("#gymActivityList");
 els.gymActivityEdit = document.querySelector("#gymActivityEdit");
@@ -450,6 +451,7 @@ function renderGym() {
   els.gymUserTitle.textContent = hasName ? profile.name : "User Name";
   els.gymCaloriesIn.textContent = caloriesIn;
   els.gymCaloriesTarget.textContent = targetCalories || 2000;
+  if (els.gymProteinIn) els.gymProteinIn.textContent = getGymProteinIn(gymDateKey());
   els.gymActivityEditor.hidden = !state.gym.activityEditorOpen;
 
 
@@ -478,6 +480,7 @@ function updateGymCalorieHeader() {
   const caloriesIn = getGymCaloriesIn(gymDateKey());
   els.gymCaloriesIn.textContent = caloriesIn;
   els.gymCaloriesTarget.textContent = getGymTargetCalories() || 2000;
+  if (els.gymProteinIn) els.gymProteinIn.textContent = getGymProteinIn(gymDateKey());
   renderGymWeekGraph();
 }
 
@@ -557,6 +560,13 @@ function getGymCaloriesIn(dateKey) {
   return meals
     .filter((meal) => meal.enabled !== false)
     .reduce((total, meal) => total + (Number(meal.calories) || 0), 0);
+}
+
+function getGymProteinIn(dateKey) {
+  const meals = state.gym.meals[dateKey] || [];
+  return meals
+    .filter((meal) => meal.enabled !== false)
+    .reduce((total, meal) => total + (Number(meal.protein) || 0), 0);
 }
 
 function getGymActivityScore(dateKey) {
