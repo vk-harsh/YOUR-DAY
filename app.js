@@ -99,6 +99,7 @@ els.gymMaintenanceCalories = document.querySelector("#gymMaintenanceCalories");
 els.gymCutCalories = document.querySelector("#gymCutCalories");
 els.gymBulkCalories = document.querySelector("#gymBulkCalories");
 els.gymRecommendedCalories = document.querySelector("#gymRecommendedCalories");
+els.gymFormTargetCalories = document.querySelector("#gymFormTargetCalories");
 els.themeToggle = document.querySelector("#themeToggle");
 els.exportData = document.querySelector("#exportData");
 els.importData = document.querySelector("#importData");
@@ -466,6 +467,9 @@ function renderGym() {
   els.gymCutCalories.textContent = caloriePlan.cut ? `${caloriePlan.cut} kcal` : "-- kcal";
   els.gymBulkCalories.textContent = caloriePlan.bulk ? `${caloriePlan.bulk} kcal` : "-- kcal";
   els.gymRecommendedCalories.textContent = caloriePlan.recommended ? `${caloriePlan.recommended} kcal` : "-- kcal";
+  if (els.gymFormTargetCalories) {
+    els.gymFormTargetCalories.textContent = targetCalories ? `${targetCalories} kcal` : "-- kcal";
+  }
 
   renderGymActivities();
   renderGymActivityEditor();
@@ -632,8 +636,7 @@ function calculateCaloriePlan(profile) {
   return { maintenance, cut, bulk, recommended };
 }
 
-function getGymTargetCalories(plan = calculateCaloriePlan(state.gym.profile)) {
-  const profile = state.gym.profile;
+function getGymTargetCalories(plan = calculateCaloriePlan(state.gym.profile), profile = state.gym.profile) {
   if (profile.calorieChoice === "custom") {
     return Number(profile.customCalories) || plan.recommended || 2000;
   }
@@ -1392,7 +1395,11 @@ els.gymMealRows.addEventListener("click", (event) => {
 });
 
 [els.gymHeight, els.gymWeight, els.gymAge, els.gymGender, els.gymTarget, els.gymCalorieChoice, els.gymCustomCalories].forEach((input) => {
-  input.addEventListener("input", () => {
+  input.addEventListener("input", (event) => {
+    if (event.target === els.gymCustomCalories && els.gymCustomCalories.value.trim() !== "") {
+      els.gymCalorieChoice.value = "custom";
+    }
+
     const draftProfile = {
       name: els.gymName.value.trim(),
       height: els.gymHeight.value.trim(),
@@ -1408,6 +1415,11 @@ els.gymMealRows.addEventListener("click", (event) => {
     els.gymCutCalories.textContent = plan.cut ? `${plan.cut} kcal` : "-- kcal";
     els.gymBulkCalories.textContent = plan.bulk ? `${plan.bulk} kcal` : "-- kcal";
     els.gymRecommendedCalories.textContent = plan.recommended ? `${plan.recommended} kcal` : "-- kcal";
+    
+    if (els.gymFormTargetCalories) {
+      const targetCalories = getGymTargetCalories(plan, draftProfile);
+      els.gymFormTargetCalories.textContent = targetCalories ? `${targetCalories} kcal` : "-- kcal";
+    }
   });
 });
 
